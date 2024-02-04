@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue Tracker Javascript</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mx-auto my-4 px-20">
+        <div class="text-2xl text-center mb-3"> ISSUE TRACKER </div>
+        <form>
+            <div class="flex flex-col gap-4">
+                <div>
+                    <label for="description" class="font-bold">Description</label>
+                    <input id="description"
+                        class="block w-full px-3 rounded-md border-0 py-2 my-1 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 text-lg sm:leading-6"
+                        type="text" placeholder="Describe the Issue">
+                </div>
+
+                <div>
+                    <label for="severity" class="font-bold">Severity</label>
+                    <select id="severity"
+                        class="block w-full px-3 rounded-md border-0 py-2 my-1 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 text-lg sm:leading-6">
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                    </select>
+                </div>
+                <div class="flex justify-end">
+                    <button id="addBtn"
+                        class="rounded-md w-max bg-blue-500 px-3 py-2 font-semibold text-white shadow-sm hover:bg-blue-600 ">Add
+                    </button>
+                </div>
+            </div>
+        </form>
+
+
+        <div class="border-t mt-10 border-gray-400 flex flex-col gap-4">
+            <div class="mt-5 flex flex-row items-center justify-between">
+                <div class="font-semibold text-2xl">List Issues</div>
+                <input type="text"
+                    class="inline-block px-3 w-1/5 rounded-md border-0 py-2 my-1 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400  focus:ring-indigo-600 text-lg sm:leading-6"
+                    id="search-key" placeholder="Search by description">
+
+            </div>
+            <div class="flex flex-row items-center justify-start">
+                <label for="filter">Filter:</label>
+                <div class="ms-10">
+                    <button
+                        class="rounded-md w-max bg-blue-500 px-3 py-2 font-semibold text-white shadow-sm hover:bg-blue-600 "
+                        onclick="filterIssues('All')">All
+                    </button>
+                    <button
+                        class="rounded-md w-max bg-green-600 px-3 py-2 font-semibold text-white shadow-sm hover:bg-green-700 "
+                        onclick="filterIssues('Open')">Open
+                    </button>
+
+                    <button
+                        class="rounded-md w-max bg-gray-950 px-3 py-2 font-semibold text-white shadow-sm hover:bg-gray-800 "
+                        onclick="filterIssues('Closed')">Close
+                    </button>
+
+                </div>
+
+            </div>
+
+            <div>
+                <label for="order">Order by:</label>
+                <select name="order" id="order"
+                    class="inline-block px-3 ms-10 rounded-md border-0 py-2 my-1 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 text-lg sm:leading-6">
+                    <option value="Default">Default</option>
+                    <option value="ASC">ASC</option>
+                    <option value="DESC">DESC</option>
+                </select>
+            </div>
+            <div id="issuesList">
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const addBtn = document.getElementById('addBtn');
+        let issues = JSON.parse(localStorage.getItem('issues')) || [];
+
+        addBtn.addEventListener('click', () => {
+            const Description = document.getElementById('description').value;
+            const Severity = document.getElementById('severity').value;
+            const Status = 'Open';
+            const ID = Date.now();
+
+            if (Description.length == 0) {
+                alert("Please fill all fields with required data");
+            }
+            else {
+                const issue = { ID, Severity, Status, Description }
+                issues.push(issue);
+                localStorage.setItem('issues', JSON.stringify(issues));
+            }
+            fetchIssues(issues);
+        });
+
+        const deleteIssue = (id) => {
+            const remainingIssues = issues.filter((issue) => ((issue.ID) != id));
+            localStorage.removeItem('issues');
+            localStorage.setItem('issues', JSON.stringify(remainingIssues));
+            issues = JSON.parse(localStorage.getItem('issues'));
+            fetchIssues(issues);
+        }
+
+        const closeIssue = (id) => {
+            const currentIssue = issues.find((issue) => ((issue.ID) == id));
+            currentIssue.Status = 'Closed';
+            currentIssue.Description = `<strike>${currentIssue.Description}</strike>`
+            localStorage.setItem('issues', JSON.stringify(issues));
+            fetchIssues(issues);
+        }
+
+        const searchKey = document.getElementById('search-key');
+        searchKey.addEventListener('input', () => {
+            const key = searchKey.value;
+            const filteredIssues = issues.filter((issue) => ((issue.Description).includes(key)));
+            fetchIssues(filteredIssues);
+        });
+
+        const filterIssues = (filter) => {
+            if (filter == 'All') {
+                fetchIssues(issues);
+            }
+            else {
+                const filteredIssues = issues.filter((issue) => ((issue.Status) == filter));
+                fetchIssues(filteredIssues);
+            }
+        }
+
+        const order = document.getElementById('order');
+        order.addEventListener('change', () => {
+            const value = order.value;
+            const priorityOrder = { 'High': 1, 'Medium': 2, 'Low': 3 };
+            let sortedIssues = [];
+            if (value == 'ASC') {
+                sortedIssues = issues.toSorted((a, b) => priorityOrder[a.Severity] - priorityOrder[b.Severity]);
+            }
+            else if (value == 'DESC') {
+                sortedIssues = issues.toSorted((a, b) => priorityOrder[b.Severity] - priorityOrder[a.Severity]);
+            }
+            else {
+                sortedIssues = issues
+            }
+            fetchIssues(sortedIssues);
+        });
+
+        const fetchIssues = (data) => {
+            const issuesList = document.getElementById('issuesList');
+            issuesList.innerHTML = '';
+
+            for (let i = 0; i < data.length; i++) {
+                const { ID, Description, Severity, Status } = data[i];
+                issuesList.innerHTML += `
+                <div class="issueItem ring-1 ring-gray-300">
+                    <div class="header bg-gray-200 p-3">
+                        <div class="id"> ${ID}</div>
+                    </div>
+                    <div class="body">
+                        <div class="flex flex-row gap-2 p-2">
+                            <div
+                                class="severity rounded-md w-max bg-blue-500 py-1 px-2 font-bold text-sm text-white shadow-sm">
+                                ${Severity}</div>
+                            <div
+                                class="severity rounded-md w-max ${Status == 'Open' ? 'bg-green-600' : 'bg-red-600'} py-1 px-2 font-bold text-sm text-white shadow-sm">
+                                ${Status}</div>
+                        </div>
+                        <div class="description p-2 text-xl">${Description}</div>
+                        <div class="flex justify-end gap-2 p-4">
+                            <button onClick="closeIssue(${ID})"
+                                class="rounded-md w-max bg-gray-950 px-3 py-2 font-semibold text-white shadow-sm hover:bg-gray-800 ">Close
+                            </button>
+                            <button onClick="deleteIssue(${ID})" class="rounded-md w-max bg-red-600 px-3 py-2 font-semibold text-white shadow-sm
+                                hover:bg-red-700 ">Delete</button>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }
+        }
+        fetchIssues(issues);
+    </script>
+</body>
+
+</html>
